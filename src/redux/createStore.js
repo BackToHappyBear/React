@@ -14,15 +14,18 @@ export default function createStore(reducer) {
   // 存储订阅的监听器
   let listeners = []
 
-  // 订阅和发布
-  const subscribe = (listener) => {
+  /**
+   * 订阅和取消
+   * 返回值是一个 unsubscribe 函数，用于取消当前订阅
+   */
+  const subscribe = listener => {
     listeners.push(listener)
     return () => {
       listeners = listeners.filter(l => l !== listener)
     }
   }
 
-  // 派发
+  // 发布
   const dispatch = action => {
     state = reducer(state, action)
     listeners.forEach(l => l())
