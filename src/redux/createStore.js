@@ -28,7 +28,7 @@ export default function createStore(reducer) {
   // 发布
   const dispatch = action => {
     state = reducer(state, action)
-    listeners.forEach(l => l())
+    listeners.forEach(l => l(state))
   }
   dispatch()
 
