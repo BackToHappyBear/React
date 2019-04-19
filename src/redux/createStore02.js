@@ -9,7 +9,7 @@ class store {
 
   subscribe = listener => {
     this.listeners.push(listener)
-    return this.listeners.filter(l => l !== listener)
+    return () => this.listeners = this.listeners.filter(l => l !== listener)
   }
 
   dispatch = action => {
@@ -19,7 +19,6 @@ class store {
       this.listeners.forEach(l => l(this.store))
     }
   }
-  
 }
 
 const createStore = new store(reducer)

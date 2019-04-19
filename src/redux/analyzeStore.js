@@ -17,7 +17,9 @@ function createStore(reducer, preloadedState, enhancer) {
     if (typeof enhancer !== 'function') {
       throw new Error('Expected the enhancer to be a function.')
     }
-
+    /**
+     * 类型检测与空值处理后最终执行如下
+     */
     return enhancer(createStore)(reducer, preloadedState)
   }
   // ...
@@ -26,11 +28,11 @@ function createStore(reducer, preloadedState, enhancer) {
 /**
  * applyMiddleware(thunk)(createStore)(reducer, preloadedState)
  * middlewares 本例中即 redux-thunk，当然也可加入多个 middleware
- * 之后即进入 createStore 中，这里会有点绕，需结合 thunk 的源码看
+ * 这里会有点绕，需结合 thunk 的源码看
  */
 function applyMiddleware(...middlewares) {
-  return (createStore) => (reducer, preloadedState, enhancer) => {
-    const store = createStore(reducer, preloadedState, enhancer)
+  return (createStore) => (...args) => {
+    const store = createStore(...args)
     let dispatch = store.dispatch
     let chain = []
 
@@ -38,6 +40,13 @@ function applyMiddleware(...middlewares) {
       getState: store.getState,
       dispatch: (action) => dispatch(action)
     }
+    /**
+     * middleware 的形式即: store => next => action
+     * compose(...chain) 返回的是一个 next => action 之后的函数
+     * 每一个 middleware 都拿到了 middlewareAPI 里的 getState 与 dispatch
+     * 同时又将 store.dispatch 传入，即 next
+     * chain 是一个 函数数组，由于闭包的原因，每个函数引用的 store 都是相同的
+     */
     chain = middlewares.map(middleware => middleware(middlewareAPI))
 
     /*
@@ -54,11 +63,20 @@ function applyMiddleware(...middlewares) {
   }
 }
 
+// A(B(C(store.dispatch)))({ type: 'ADD', payload: 1 })
+function logger({ dispatch, getState }) {
+  return next => action => {
+    console.log('before action', getState())
+    next(action)
+    console.log('after action', getState())
+  }
+}
+
 /**
  * 从 middlewareAPI中 拿到 dispatch 和 getState，然后依旧返回一个函数
  * 这里的 next 即上面 dispatch中 传递的 store.dispatch
  * 结合如下异步 action 的例子，这里的 dispatch 即 action => dispatch(action)
- * ps: 其实 redux-thunk 的作用就是处理 function 类型的 action
+ * 本质上 redux-thunk 的作用就是处理 function 类型的 action
  */
 function thunkMiddleware({
   dispatch,
@@ -70,6 +88,9 @@ function thunkMiddleware({
     next(action);
 }
 
+/**
+ * 异步 action
+ */
 function incrementAsync() {
   return (dispatch, getState) => {
     setTimeout(() => {
@@ -78,9 +99,9 @@ function incrementAsync() {
   };
 }
 
-
-
-// compose 源码
+/**
+ * compose 源码
+ */
 function compose(...funcs) {
   if (funcs.length === 0) {
     return arg => arg
@@ -91,4 +112,8 @@ function compose(...funcs) {
   }
 
   return funcs.reduce((a, b) => (...args) => a(b(...args)))
+}
+
+export default function compose02(...funcs) {
+  return arg => funcs.reduceRight((composed, f) => f(composed), arg);
 }
